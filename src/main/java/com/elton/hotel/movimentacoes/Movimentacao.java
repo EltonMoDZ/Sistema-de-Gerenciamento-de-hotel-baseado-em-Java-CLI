@@ -4,9 +4,12 @@ import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.UUID;
 
+import org.springframework.stereotype.Service;
+
 import com.elton.hotel.movimentacoes.Entities.Registro;
 import com.elton.hotel.repository.RegistroRepository;
 
+@Service
 public class Movimentacao {
     private LinkedHashMap<String, Registro> registros = new LinkedHashMap<>();
 
@@ -33,6 +36,12 @@ public class Movimentacao {
         }
         if (descricao.isEmpty()) {
             descricao = "";
+        }
+        if (!entradaESaida) {
+            if (getSaldo() < valor) {
+                System.out.println("Saldo insuficiente!");
+                return;
+            }
         }
 
         var idString = gerarUUIDUnico(UUID.randomUUID().toString());
@@ -70,13 +79,18 @@ public class Movimentacao {
     public double getSaldo() {
         registros = registroRepository.findAll().stream()
                 .collect(LinkedHashMap::new, (map, registro) -> map.put(registro.getUuid(), registro), LinkedHashMap::putAll);
-        return registros.values().stream()
+        double entradas = registros.values().stream()
                 .filter(Registro::isEntradaESaida)
                 .mapToDouble(Registro::getValor)
                 .sum();
+        double saidas = registros.values().stream()
+                .filter(registro -> !registro.isEntradaESaida())
+                .mapToDouble(Registro::getValor)
+                .sum();
+        return entradas - saidas;
     }
 
-    private String gerarUUIDUnico(String idGerado) {
+            private String gerarUUIDUnico(String idGerado) {
         String uuid;
         if (registroRepository.existsById(uuid = idGerado)) {
             do {
